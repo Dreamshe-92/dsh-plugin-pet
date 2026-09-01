@@ -1,0 +1,6 @@
+# Generated client bundle (contains the user's own pet sprite, built at install)
+pet-plugin/lib/client.js
+
+# OS noise
+.DS_Store
+*.log

@@ -1,0 +1,33 @@
+{
+  "name": "dsh-plugin-pet",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Session-state pet avatar for DeepSeek Harness (DSH) Desktop: Codex-pet-contract sprite atlas, per-row official animations, bottom-edge wandering, drag-to-place, new-reply notify",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime"
+      ],
+      "platform": "web"
+    }
+  },
+  "dependencies": {
+    "react": "^18.2.0"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "codex-pet",
+    "pet",
+    "spritesheet",
+    "desktop-pet"
+  ],
+  "license": "MIT"
+}
