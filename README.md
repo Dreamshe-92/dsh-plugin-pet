@@ -23,7 +23,7 @@
 
 ## 环境要求
 
-- [DSH Desktop](https://github.com/deepseek-ai/deepseek-harness)（DeepSeek Harness 桌面版）
+- DSH（DeepSeek Harness）：[DSH Desktop 桌面版](https://github.com/deepseek-ai/deepseek-harness)或 `dsh web` 浏览器页面均可
 - macOS（构建链使用系统自带 `sips` 做 WebP→PNG 转换）
 - `node`（构建）与 `python3`（安装补丁；缺失时跳过 YAML 校验）
 - 一份宠物素材（见下文）
@@ -62,14 +62,14 @@ dsh web          # 或 dsh --profile web，用浏览器打开它打印的 http:/
 
 ## 内置示例宠物
 
-仓库自带两只 Codex 契约宠物（Kimi Agent 宠物孵化技能产出），无需任何本地素材即可开箱即用：
+仓库自带两只 Codex 契约宠物，无需任何本地素材即可开箱即用：
 
 <p align="center">
   <img src="pets/xiaowa/previews/waving.gif" width="180" alt="小娲" />
   <img src="pets/xiaochan/previews/waving.gif" width="180" alt="小蝉" />
 </p>
 
-<p align="center"><b>小娲 xiaowa</b> · 夏日清新风的灵蛇小女娲：金冠广袖、蛇尾轻盈、莲灯相伴&nbsp;&nbsp;|&nbsp;&nbsp;<b>小蝉 xiaochan</b> · 夏日清新风的绯衣小金蝉：火焰莲冠、红袈裟、九环禅杖在手</p>
+<p align="center"><b>小娲 xiaowa</b> · 灵蛇小女娲：金冠广袖、蛇尾轻盈、莲灯相伴&nbsp;&nbsp;|&nbsp;&nbsp;<b>小蝉 xiaochan</b> · 绯衣小金蝉：火焰莲冠、红袈裟、九环禅杖在手</p>
 
 ```bash
 bash install.sh --pet xiaowa      # 或 --pet xiaochan
