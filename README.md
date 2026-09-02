@@ -45,6 +45,21 @@ bash install.sh --pet xiaowa
 
 > 本仓库**不包含**任何精灵图素材——`client.js` 是安装时从你本地宠物构建的产物（已 gitignore）。
 
+## 在 dsh web 原生页面中使用
+
+插件是载体无关的（`dsh.client.platform: "web"`）：DSH Desktop 的 Electron 窗口和 `dsh web` 启动的浏览器页面加载的是**同一个 Web bundle**，由同一个 webserver 以 `/plugins/dsh-plugin-pet/client.js` 服务。安装脚本同时 patch 了 `~/.dsh/profiles/` 下的 `desktop` 与 `web` 两个 profile，因此两种形态开箱即用：
+
+```bash
+dsh web          # 或 dsh --profile web，用浏览器打开它打印的 http://127.0.0.1:<port>
+```
+
+注意事项：
+
+- 若 `dsh web` 进程是在安装插件**之前**启动的，重启一次该进程（profile 在启动时组装），宠物才会进入页面
+- 散步/拖拽基于 `window.innerWidth/innerHeight`，浏览器窗口同样适用；双击冻结等状态存于浏览器 localStorage
+- Desktop 是常驻 app，宠物一直在；`dsh web` 进程退出后，宠物随页面一起消失
+
+
 ## 宠物素材从哪来
 
 **方式一：Codex 宠物目录（推荐）**
