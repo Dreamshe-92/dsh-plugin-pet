@@ -25,7 +25,10 @@ if [[ -n "$TARGET" || ! -f "$SRC_DIR/lib/client.js" ]]; then
   if [[ -z "$TARGET" ]]; then
     FIRST=$(ls "$HOME"/.codex/pets/*/spritesheet.webp 2>/dev/null | head -1 || true)
     if [[ -z "$FIRST" ]]; then
-      echo "install: no pet found under ~/.codex/pets/ — pass --pet <name-or-path> or create one first (see README)" >&2
+      FIRST=$(ls "$ROOT"/pets/*/spritesheet.webp 2>/dev/null | head -1 || true)
+    fi
+    if [[ -z "$FIRST" ]]; then
+      echo "install: no pet found under ~/.codex/pets/ or ./pets/ — pass --pet <name-or-path> (see README)" >&2
       exit 1
     fi
     TARGET="$(basename "$(dirname "$FIRST")")"

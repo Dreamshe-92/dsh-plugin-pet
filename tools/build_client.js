@@ -21,6 +21,18 @@ for (const flag of ['--cols', '--rows', '--size']) {
   if (i >= 0) gridArgs.push(flag, args[i + 1]);
 }
 
+function findIn(dir, t) {
+  if (!fs.existsSync(dir)) return null;
+  for (const entry of fs.readdirSync(dir).sort()) {
+    if (!entry.toLowerCase().includes(t.toLowerCase())) continue;
+    for (const name of ['spritesheet.webp', 'spritesheet.png', 'spritesheet.jpg']) {
+      const c = path.join(dir, entry, name);
+      if (fs.existsSync(c)) return c;
+    }
+  }
+  return null;
+}
+
 function resolveImage(t) {
   if (fs.existsSync(t) && fs.statSync(t).isFile()) return t;
   if (fs.existsSync(t) && fs.statSync(t).isDirectory()) {
@@ -30,16 +42,10 @@ function resolveImage(t) {
     }
     throw new Error('no spritesheet.* in ' + t);
   }
-  if (fs.existsSync(petsDir)) {
-    for (const entry of fs.readdirSync(petsDir).sort()) {
-      if (!entry.toLowerCase().includes(t.toLowerCase())) continue;
-      for (const name of ['spritesheet.webp', 'spritesheet.png', 'spritesheet.jpg']) {
-        const c = path.join(petsDir, entry, name);
-        if (fs.existsSync(c)) return c;
-      }
-    }
-  }
-  throw new Error('no pet matching [' + t + '] under ' + petsDir);
+  const builtin = path.join(ROOT, 'pets');
+  const hit = findIn(petsDir, t) || findIn(builtin, t);
+  if (hit) return hit;
+  throw new Error('no pet matching [' + t + '] under ' + petsDir + ' or ' + builtin);
 }
 const img = resolveImage(target);
 
