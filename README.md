@@ -24,9 +24,9 @@
 ## 环境要求
 
 - DSH（DeepSeek Harness）：[DSH Desktop 桌面版](https://github.com/deepseek-ai/deepseek-harness)或 `dsh web` 浏览器页面均可
-- macOS（构建链使用系统自带 `sips` 做 WebP→PNG 转换）
-- `node`（构建）与 `python3`（安装补丁；缺失时跳过 YAML 校验）
-- 一份宠物素材（见下文）
+- 任意平台（macOS / Windows / Linux）：契约尺寸（1536×1872）的 webp 素材免转换直测（读文件头即可），Windows/Linux 无需 sips
+- `node`（构建与安装；Windows 下安装脚本建议在 Git Bash 中运行）
+- 一份宠物素材（仓库已内置七只，开箱即用）
 
 ## 快速开始
 
@@ -62,17 +62,12 @@ dsh web          # 或 dsh --profile web，用浏览器打开它打印的 http:/
 
 ## 内置示例宠物
 
-仓库自带两只 Codex 契约宠物，无需任何本地素材即可开箱即用：
+仓库自带七只 Codex 契约宠物，无需任何本地素材即可开箱即用：
 
-<p align="center">
-  <img src="pets/xiaowa/previews/waving.gif" width="180" alt="小娲" />
-  <img src="pets/xiaochan/previews/waving.gif" width="180" alt="小蝉" />
-</p>
-
-<p align="center"><b>小娲 xiaowa</b> · 灵蛇小女娲：金冠广袖、蛇尾轻盈、莲灯相伴&nbsp;&nbsp;|&nbsp;&nbsp;<b>小蝉 xiaochan</b> · 绯衣小金蝉：火焰莲冠、红袈裟、九环禅杖在手</p>
+<table><tr><td align="center"><img src="pets/xiaowa/previews/waving.gif" width="140" alt="小娲"/><br/><sub><b>小娲</b> 灵蛇小女娲：金冠广袖、蛇尾轻盈、莲灯相伴<br/><code>xiaowa</code></sub></td><td align="center"><img src="pets/xiaochan/previews/waving.gif" width="140" alt="小蝉"/><br/><sub><b>小蝉</b> 绯衣小金蝉：火焰莲冠、红袈裟、九环禅杖在手<br/><code>xiaochan</code></sub></td><td align="center"><img src="pets/dutu/previews/waving.gif" width="140" alt="赌徒"/><br/><sub><b>赌徒</b> 小赌徒：白头巾红发、黄绿短打、巨型骰子不离手<br/><code>dutu</code></sub></td><td align="center"><img src="pets/changle/previews/waving.gif" width="140" alt="长乐仙子"/><br/><sub><b>长乐仙子</b> 莲花小仙子：银发凤冠、粉襦绿裙、花扇莲台<br/><code>changle</code></sub></td></tr><tr><td align="center"><img src="pets/jiangshi/previews/waving.gif" width="140" alt="小僵尸"/><br/><sub><b>小僵尸</b> 紫衣小僵尸：清朝官帽、平举双臂蹦跳<br/><code>jiangshi</code></sub></td><td align="center"><img src="pets/youming/previews/waving.gif" width="140" alt="幽冥书生"/><br/><sub><b>幽冥书生</b> 青巾书箱、火耀星河长袍、踏幽蓝鬼火<br/><code>youming</code></sub></td><td align="center"><img src="pets/longgui/previews/waving.gif" width="140" alt="龙龟"/><br/><sub><b>龙龟</b> 小龙龟：金头绿壳、龙须龟尾<br/><code>longgui</code></sub></td><td></td></tr></table>
 
 ```bash
-bash install.sh --pet xiaowa      # 或 --pet xiaochan
+bash install.sh --pet xiaowa   # xiaochan / dutu / changle / jiangshi / youming / longgui
 ```
 
 每只宠物附全部 9 个状态的预览 GIF（见 `pets/<name>/previews/`）。

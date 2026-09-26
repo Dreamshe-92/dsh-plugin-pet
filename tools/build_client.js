@@ -49,13 +49,23 @@ function resolveImage(t) {
 }
 const img = resolveImage(target);
 
-const png = path.join(os.tmpdir(), 'dsh_pet_sheet_' + process.pid + '.png');
-const conv = spawnSync('sips', ['-s', 'format', 'png', img, '--out', png], { stdio: 'pipe' });
-if (conv.status !== 0) throw new Error('PNG conversion failed (needs macOS sips, or convert the sheet to PNG first): ' + (conv.stderr || '').toString().slice(0, 200));
-
-const measured = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'measure_sheet.js'), png].concat(gridArgs), {
-  stdio: ['ignore', 'pipe', 'inherit'],
-});
+// Measurement input: contract webp and PNG measure directly (no conversion,
+// no sips — this is what makes Windows work out of the box). Only a
+// non-contract webp or a jpg falls back to a PNG conversion via macOS sips.
+function measure(targetFile) {
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'measure_sheet.js'), targetFile].concat(gridArgs), {
+    stdio: ['ignore', 'pipe', 'inherit'],
+  });
+  return r;
+}
+let measured = measure(img);
+if (measured.status === 3 && img.toLowerCase().endsWith('.webp')) {
+  const png = path.join(os.tmpdir(), 'dsh_pet_sheet_' + process.pid + '.png');
+  const conv = spawnSync('sips', ['-s', 'format', 'png', img, '--out', png], { stdio: 'pipe' });
+  if (conv.status !== 0) throw new Error('this webp is not contract-sized and macOS sips is unavailable; convert it to PNG (alpha-preserving) and retry');
+  measured = measure(png);
+  fs.unlinkSync(png);
+}
 if (measured.status !== 0) throw new Error('measure_sheet.js failed');
 const m = JSON.parse(measured.stdout.toString());
 console.log('sprite : ' + img);
@@ -109,5 +119,4 @@ const cssProbe = spawnSync(process.execPath, [probeFile], { stdio: 'inherit' });
 fs.unlinkSync(probeFile);
 if (cssProbe.status !== 0) throw new Error('generated css failed the runtime url gate');
 
-fs.unlinkSync(png);
 console.log('built   : ' + outPath + ' (' + out.length + ' bytes, mode=' + m.mode + ')');

@@ -1,23 +1,66 @@
 #!/usr/bin/env node
-// measure_sheet.js <image.png> [--cols N] [--rows N] [--size PX]
+// measure_sheet.js <image.png|image.webp> [--cols N] [--rows N] [--size PX]
 //
-// Measures a transparent-background sprite grid by scanning the alpha channel
-// for blank rows/columns, then prints JSON: {cols, rows, cellW, cellH,
-// displayW, displayH, source}. Manual --cols/--rows override the scan (needed
-// for opaque backgrounds, e.g. jpg, where no alpha gaps exist).
+// Measures a sprite grid two ways:
+//  * webp fast path — canvas size from the RIFF header; a contract-sized
+//    (1536x1872) sheet is confirmed WITHOUT pixel decoding (no sips needed,
+//    works on Windows). Non-contract webp is rejected (exit 3): convert it
+//    to PNG for the alpha scan.
+//  * PNG path — full decode + alpha-channel blank-run scan derives the grid
+//    for arbitrary sheets; manual --cols/--rows override everything.
 const fs = require('fs');
 const zlib = require('zlib');
 
 const args = process.argv.slice(2);
 const image = args[0];
-if (!image) { console.error('usage: measure_sheet.js <image.png> [--cols N] [--rows N] [--size PX]'); process.exit(2); }
+if (!image) { console.error('usage: measure_sheet.js <image> [--cols N] [--rows N] [--size PX]'); process.exit(2); }
 function opt(name) { const i = args.indexOf(name); return i >= 0 ? Number(args[i + 1]) : undefined; }
 const overrideCols = opt('--cols'), overrideRows = opt('--rows');
 const maxSize = opt('--size') || 96;
 
-// ── minimal PNG reader (8-bit RGBA only) ────────────────────────────────────
-const data = fs.readFileSync(image);
-if (data.readUInt32BE(0) !== 0x89504e47) { console.error('not a png (convert with sips first)'); process.exit(1); }
+const CONTRACT_ROW_ANIM =
+  'const ROW_ANIM = {' +
+  ' sleep: { row: 0, cols: [0,1,2,3,4,5], durations: [840,330,330,420,420,960] },' +
+  ' idle: { row: 0, cols: [0,1,2,3,4,5], durations: [280,110,110,140,140,320] },' +
+  ' working: { row: 7, cols: [0,1,2,3,4,5], durations: [120,120,120,120,120,220] },' +
+  ' waiting: { row: 6, cols: [0,1,2,3,4,5], durations: [150,150,150,150,150,260] },' +
+  ' notify: { row: 4, cols: [0,1,2,3,4], durations: [140,140,140,140,280] },' +
+  ' waving: { row: 3, cols: [0,1,2,3], durations: [140,140,140,280] },' +
+  ' running_right: { row: 1, cols: [0,1,2,3,4,5,6,7], durations: [120,120,120,120,120,120,120,220] },' +
+  ' running_left: { row: 2, cols: [0,1,2,3,4,5,6,7], durations: [120,120,120,120,120,120,120,220] }' +
+  ' };';
+
+function emit(source, width, height, cols, rows, note, mode, scannedCols, scannedRows) {
+  const cellW = Math.floor(width / cols), cellH = Math.floor(height / rows);
+  const scale = maxSize / Math.max(cellW, cellH);
+  const displayW = Math.max(1, Math.round(cellW * scale)), displayH = Math.max(1, Math.round(cellH * scale));
+  const rowAnim = mode === 'contract' ? CONTRACT_ROW_ANIM : 'const ROW_ANIM = null;';
+  console.log(JSON.stringify({ source, width, height, cols, rows, cellW, cellH, displayW, displayH,
+    note, mode, rowAnim, scannedCols, scannedRows,
+    sheet: '{ cols: ' + cols + ', rows: ' + rows + ', displayW: ' + displayW + ', displayH: ' + displayH + ' };' }));
+  process.exit(0);
+}
+
+// ── webp fast path ─────────────────────────────────────────────────────────
+const raw0 = fs.readFileSync(image);
+if (raw0.toString('ascii', 0, 4) === 'RIFF') {
+  let dims = null;
+  if (raw0.length >= 30 && raw0.toString('ascii', 8, 12) === 'WEBP') {
+    const fourcc = raw0.toString('ascii', 12, 16);
+    if (fourcc === 'VP8X') dims = { w: 1 + raw0.readUIntLE(24, 3), h: 1 + raw0.readUIntLE(27, 3) };
+    else if (fourcc === 'VP8 ') dims = { w: raw0.readUInt16LE(26) & 0x3fff, h: raw0.readUInt16LE(28) & 0x3fff };
+    else if (fourcc === 'VP8L') { const b = raw0.readUInt32LE(21); dims = { w: (b & 0x3fff) + 1, h: ((b >> 14) & 0x3fff) + 1 }; }
+  }
+  if (!dims) { console.error('unreadable webp header'); process.exit(3); }
+  if (dims.w === 1536 && dims.h === 1872) emit(image, 1536, 1872, 8, 9, 'codex-pet-contract (webp header)', 'contract', 0, 0);
+  if (overrideCols && overrideRows) emit(image, dims.w, dims.h, overrideCols, overrideRows, 'webp header + manual grid', 'simple', 0, 0);
+  console.error('webp ' + dims.w + 'x' + dims.h + ' is not contract-sized; convert it to PNG for the alpha scan, or pass --cols/--rows');
+  process.exit(3);
+}
+
+// ── PNG path (8-bit RGBA) ──────────────────────────────────────────────────
+const data = raw0;
+if (data.readUInt32BE(0) !== 0x89504e47) { console.error('not a png or webp'); process.exit(1); }
 let pos = 8, width = 0, height = 0;
 const idat = [];
 while (pos < data.length) {
@@ -29,12 +72,12 @@ while (pos < data.length) {
   else if (type === 'IDAT') idat.push(body);
   pos += 12 + length;
 }
-const raw = zlib.inflateSync(Buffer.concat(idat));
+const rawBuf = zlib.inflateSync(Buffer.concat(idat));
 const bpp = 4, stride = width * bpp;
 const out = new Uint8Array(width * height * bpp);
 let prev = new Uint8Array(stride), p = 0;
 for (let y = 0; y < height; y++) {
-  const f = raw[p++]; const line = raw.subarray(p, p + stride); p += stride;
+  const f = rawBuf[p++]; const line = rawBuf.subarray(p, p + stride); p += stride;
   const cur = out.subarray(y * stride, (y + 1) * stride);
   if (f === 0) cur.set(line);
   else if (f === 1) { cur.set(line); for (let i = bpp; i < stride; i++) cur[i] = (cur[i] + cur[i - bpp]) & 255; }
@@ -49,7 +92,6 @@ for (let y = 0; y < height; y++) {
   prev = cur;
 }
 
-// ── alpha occupancy scan ────────────────────────────────────────────────────
 const THRESH = 16;
 const colCounts = new Uint32Array(width), rowCounts = new Uint32Array(height);
 for (let y = 0; y < height; y++) { const base = y * stride;
@@ -64,7 +106,6 @@ function contentRuns(counts, minGap = 2) {
   if (start >= 0) runs.push([start, counts.length - 1]);
   return runs;
 }
-
 function uniform(runs) {
   if (runs.length < 2) return false;
   const ws = runs.map(([a, b]) => b - a + 1);
@@ -74,43 +115,13 @@ function uniform(runs) {
 }
 
 const colRuns = contentRuns(colCounts), rowRuns = contentRuns(rowCounts);
-let cols = overrideCols, rows = overrideRows, scanNote = 'manual';
-if (!cols && !rows) {
-  if (colRuns.length >= 1 && rowRuns.length >= 1 && uniform(colRuns) && uniform(rowRuns)) {
-    cols = colRuns.length; rows = rowRuns.length; scanNote = 'alpha-scan';
-  } else {
-    // fallback: single static frame
-    cols = 1; rows = 1; scanNote = 'fallback-single-frame (no uniform grid found; pass --cols/--rows)';
-  }
+if (width === 1536 && height === 1872 && !overrideCols && !overrideRows) {
+  emit(image, width, height, 8, 9, 'codex-pet-contract', 'contract', colRuns.length, rowRuns.length);
 }
-cols = cols || 1; rows = rows || 1;
-const cellW = Math.floor(width / cols), cellH = Math.floor(height / rows);
-// scale so the longest display side is maxSize, aspect preserved
-const scale = maxSize / Math.max(cellW, cellH);
-const displayW = Math.max(1, Math.round(cellW * scale));
-const displayH = Math.max(1, Math.round(cellH * scale));
-
-// ── Codex pet contract detection (hatch-pet / codex-pet-contract) ───────────
-// 1536x1872 atlas is BY CONTRACT an 8x9 grid of 192x208 cells with fixed
-// animation-row semantics; trust the contract over the scan.
-const CONTRACT_DIMS = width === 1536 && height === 1872;
-let mode = 'simple';
-if (CONTRACT_DIMS && !overrideCols && !overrideRows) { mode = 'contract'; cols = 8; rows = 9; scanNote = 'codex-pet-contract'; }
-
-const CONTRACT_ROW_ANIM =
-  'const ROW_ANIM = {' +
-  ' sleep: { row: 0, cols: [0,1,2,3,4,5], durations: [840,330,330,420,420,960] },' +
-  ' idle: { row: 0, cols: [0,1,2,3,4,5], durations: [280,110,110,140,140,320] },' +
-  ' working: { row: 7, cols: [0,1,2,3,4,5], durations: [120,120,120,120,120,220] },' +
-  ' waiting: { row: 6, cols: [0,1,2,3,4,5], durations: [150,150,150,150,150,260] },' +
-  ' notify: { row: 4, cols: [0,1,2,3,4], durations: [140,140,140,140,280] },' +
-  ' waving: { row: 3, cols: [0,1,2,3], durations: [140,140,140,280] },' +
-  ' running_right: { row: 1, cols: [0,1,2,3,4,5,6,7], durations: [120,120,120,120,120,120,120,220] },' +
-  ' running_left: { row: 2, cols: [0,1,2,3,4,5,6,7], durations: [120,120,120,120,120,120,120,220] }' +
-  ' };';
-
-console.log(JSON.stringify({ source: image, width, height, cols, rows, cellW, cellH,
-  displayW, displayH, note: scanNote, mode,
-  rowAnim: mode === 'contract' ? CONTRACT_ROW_ANIM : 'const ROW_ANIM = null;',
-  scannedCols: colRuns.length, scannedRows: rowRuns.length,
-  sheet: '{ cols: ' + cols + ', rows: ' + rows + ', displayW: ' + displayW + ', displayH: ' + displayH + ' };' }));
+if (!overrideCols && !overrideRows) {
+  if (colRuns.length >= 1 && rowRuns.length >= 1 && uniform(colRuns) && uniform(rowRuns)) {
+    emit(image, width, height, colRuns.length, rowRuns.length, 'alpha-scan', 'simple', colRuns.length, rowRuns.length);
+  }
+  emit(image, width, height, 1, 1, 'fallback-single-frame (no uniform grid; pass --cols/--rows)', 'simple', 0, 0);
+}
+emit(image, width, height, overrideCols || 1, overrideRows || 1, 'manual', 'simple', 0, 0);
