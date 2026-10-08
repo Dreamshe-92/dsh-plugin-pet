@@ -72,6 +72,10 @@ bash install.sh --pet xiaowa   # xiaochan / dutu / changle / jiangshi / youming 
 
 每只宠物附全部 9 个状态的预览 GIF（见 `pets/<name>/previews/`）。
 
+这些宠物同样可以装进本地 Codex 宠物目录（' + chr(96) + '~/.codex/pets/' + chr(96) + '，Codex 桌面版可直接选用）：
+
+' + chr(96) + chr(96) + chr(96) + 'bash' + chr(10) + 'bash sync_to_codex.sh          # 增量同步（相同则跳过）' + chr(10) + 'bash sync_to_codex.sh --force  # 强制覆盖' + chr(10) + chr(96) + chr(96) + chr(96) + 
+
 ## 宠物素材从哪来
 
 **方式一：Codex 宠物目录（推荐）**
